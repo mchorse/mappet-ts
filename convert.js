@@ -4,6 +4,22 @@ var customArgs = {
     "IScriptEvent.scheduleScript(delay,func)": "delay: number, func: (c: IScriptEvent) => void",
     "IScriptEvent.scheduleScript(delay,consumer)": "delay: number, consumer: (c: IScriptEvent) => void"
 };
+var customReturns = {
+    "IScriptPlayer.getFactions()": "Set<string>",
+    "IScriptWorld.getEntities(x1,y1,z1,x2,y2,z2)": "List<IScriptEntity>",
+    "IScriptWorld.getEntities(x,y,z,radius)": "List<IScriptEntity>",
+    "IScriptServer.getEntities(targetSelector)": "List<IScriptEntity>",
+    "IScriptServer.getAllPlayers()": "List<IScriptEntity>",
+    "IScriptFancyWorld.explode(x1,y1,z1,x2,y2,z2,blocksPercentage)": "List<IScriptEntity>",
+    "IScriptFancyWorld.explode(x,y,z,radius,blocksPercentage)": "List<IScriptEntity>",
+    "IScriptItemStack.getLoreList()": "List<string>",
+    "IScriptItemStack.getCanDestroyBlocks()": "List<string>",
+    "IScriptItemStack.getCanPlaceOnBlocks()": "List<string>",
+    "IMappetStates.keys()": "Set<string>",
+    "IMappetQuests.getIds()": "Set<string>",
+    "INBTCompound.keys()": "Set<string>",
+    "UIStringListComponent.getValues()": "List<string>",
+}
 var customExtends = {
     IScriptPlayer: "IScriptEntity",
     IScriptNpc: "IScriptEntity",
@@ -173,11 +189,13 @@ function main()
             {
                 var field = getField(method.name);
 
+                var customReturnsKey = name + "." + method.name + "(" + method.arguments.map(arg => sanitizeVariableName(arg.name)).join(",") + ")";
+
+                var returnsType = customReturns[customReturnsKey] ? customReturns[customReturnsKey] : method.returns.type;
+
                 field.getter = true;
-                field.type = method.returns.type;
-            }
-            else if (method.name.startsWith("set") && name[3].toLowerCase() !== name[3] && method.arguments.length === 1)
-            {
+                field.type = returnsType;
+            } else if (method.name.startsWith("set") && method.name[3].toLowerCase() !== method.name[3] && method.arguments.length === 1) {
                 var field = getField(method.name);
 
                 field.setter = true;
@@ -211,8 +229,10 @@ function main()
                 args = customArgs[customArgKey];
             }
 
+            var returnsType = customReturns[customArgKey] ? customReturns[customArgKey] : method.returns.type;
+
             output += generateJSDocs(method);
-            output += `    ${method.name}(${args}): ${convertType(method.returns.type)}\n`;
+            output += `    ${method.name}(${args}): ${convertType(returnsType)}\n`;
         });
 
         output += "}\n\n";
