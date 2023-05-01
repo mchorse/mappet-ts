@@ -169,14 +169,14 @@ function main()
                 return;
             }
 
-            if (method.name.startsWith("get") && method.arguments.length === 0)
+            if (method.name.startsWith("get") && name[3].toLowerCase() !== name[3] && method.arguments.length === 0)
             {
                 var field = getField(method.name);
 
                 field.getter = true;
                 field.type = method.returns.type;
             }
-            else if (method.name.startsWith("set"))
+            else if (method.name.startsWith("set") && name[3].toLowerCase() !== name[3] && method.arguments.length === 1)
             {
                 var field = getField(method.name);
 
@@ -189,7 +189,7 @@ function main()
         {
             var field = fields[key];
 
-            output += `    ${field.getter ? "readonly " : ""}${key}: ${convertType(field.type)}\n`;
+            output += `    ${(field.setter ? "" : "readonly ")}${key}: ${convertType(field.type)}\n`;
         });
 
         clazz.methods.forEach(method =>
