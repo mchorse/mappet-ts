@@ -2,7 +2,12 @@ var fs = require("fs");
 var docs = require("./docs.json");
 var customArgs = {
     "IScriptEvent.scheduleScript(delay,func)": "delay: number, func: (c: IScriptEvent) => void",
-    "IScriptEvent.scheduleScript(delay,consumer)": "delay: number, consumer: (c: IScriptEvent) => void"
+    "IScriptEvent.scheduleScript(delay,consumer)": "delay: number, consumer: (c: IScriptEvent) => void",
+    "IMappetUIBuilder.stringList(values)": "values: string[]",
+    "IMappetUIBuilder.stringList(values,selected)": "values: string[], selected: number",
+    "UIStringListComponent.values(values)": "values: string[]|List<string>",
+    "UIStringListComponent.setValues(values)": "values: string[]|List<string>",
+
 };
 var customReturns = {
     "IScriptPlayer.getFactions()": "Set<string>",
@@ -41,13 +46,166 @@ var customExtends = {
     UITextareaComponent: "UILabelBaseComponent",
     UITextboxComponent: "UILabelBaseComponent",
     UITextComponent: "UILabelBaseComponent",
-    UIToggleComponent: "UILabelBaseComponent"
+    UIToggleComponent: "UILabelBaseComponent",
+
+    "List<T>": "JavaCollection<T>",
+    "Set<T>": "JavaCollection<T>",
 }
+var customDeclares = [
+    {
+        name: "TileEntity",
+        methods: []
+    },
+    {
+        name: "IBlockState",
+        methods: []
+    },
+    {
+        name: "EntityPlayerMP",
+        methods: []
+    },
+    {
+        name: "AbstractMorph",
+        methods: []
+    },
+    {
+        name: "EntityNpc",
+        methods: []
+    },
+    {
+        name: "Entity",
+        methods: []
+    },
+    {
+        name: "Potion",
+        methods: []
+    },
+    {
+        name: "World",
+        methods: []
+    },
+    {
+        name: "EnumParticleTypes",
+        methods: []
+    },
+    {
+        name: "MinecraftServer",
+        methods: []
+    },
+    {
+        name: "RayTraceResult",
+        methods: []
+    },
+    {
+        name: "Vector2d",
+        methods: []
+    },
+    {
+        name: "Vector3d",
+        methods: []
+    },
+    {
+        name: "Vector4d",
+        methods: []
+    },
+    {
+        name: "Matrix3d",
+        methods: []
+    },
+    {
+        name: "Matrix4d",
+        methods: []
+    },
+    {
+        name: "ItemStack",
+        methods: []
+    },
+    {
+        name: "Item",
+        methods: []
+    },
+    {
+        name: "IInventory",
+        methods: []
+    },
+    {
+        name: "NBTTagList",
+        methods: []
+    },
+    {
+        name: "NBTTagCompound",
+        methods: []
+    },
+    {
+        name: "List<T>",
+        methods: []
+    },
+    {
+        name: "Map",
+        methods: []
+    },
+    {
+        name: "Set<T>",
+        methods: []
+    },
+    {
+        name: "JavaCollection<T>",
+        methods: []
+    },
+    {
+        name: "JavaAccessor",
+        interfaces: [],
+        methods: [
+            {
+                name: "from<T>",
+                doc: "Turns Java collection into JS array",
+                returns: {
+                    "type": "T[]"
+                },
+                arguments: [
+                    {
+                        name: "collection",
+                        type: "JavaCollection<T>"
+                    }
+                ],
+                annotations: []
+            },
+            {
+                name: "type",
+                doc: "Takes a string with the fully qualified Java class name, and returns the corresponding <b>JavaClass</b> function object.",
+                returns: {
+                    "type": "any"
+                },
+                arguments: [
+                    {
+                        name: "className",
+                        type: "string"
+                    }
+                ],
+                annotations: []
+            },
+        ],
+    },
+];
+var ignoreFields = [
+    "IScriptPlayer.getFactions",
+    "IScriptEntity.getMount",
+    "IScriptEntity.setBurning",
+    "UIParentComponent.getChildComponents",
+    "UIStringListComponent.getValues",
+    "UIStringListComponent.setValues",
+    "UILabelBaseComponent.getLabel",
+    "UIComponent.getChanges",
+    "UIComponent.getChildComponents",
+];
+var customLines = [
+    "declare const Java: JavaAccessor;",
+    "declare const mappet: IScriptFactory;"
+]
 
 function convertType(type)
 {
-    if (type === "float" || type === "double" || type === "short" || type === "long" || type === "byte" || type === "int")
-    {
+    if (type === "float" || type === "double" || type === "short" || type === "long" || type === "byte" || type === "int") {
         return "number";
     }
     else if (type === "java.lang.String")
@@ -152,8 +310,9 @@ function generateJSDocs(method)
 function main()
 {
     var output = "// SCRIPTING API\n\n";
+    var classes = [...docs.classes, ...customDeclares];
 
-    docs.classes.forEach(clazz =>
+    classes.forEach(clazz =>
     {
         var name = convertType(clazz.name);
         var fields = {};
@@ -180,12 +339,12 @@ function main()
 
         clazz.methods.forEach(method =>
         {
-            if (method.name.length <= 3)
+            if (method.name.length <= 3 || ignoreFields.indexOf(name + "." + method.name) !== -1)
             {
                 return;
             }
 
-            if (method.name.startsWith("get") && name[3].toLowerCase() !== name[3] && method.arguments.length === 0)
+            if (method.name.startsWith("get") && method.name[3].toLowerCase() !== method.name[3] && method.arguments.length === 0)
             {
                 var field = getField(method.name);
 
@@ -199,14 +358,16 @@ function main()
                 var field = getField(method.name);
 
                 field.setter = true;
-                field.type = method.arguments[0].type;
             }
         });
 
-        Object.keys(fields).forEach(key => 
+        Object.keys(fields).forEach(key =>
         {
             var field = fields[key];
-
+            if (!field.type)
+            {
+                return;
+            }
             output += `    ${(field.setter ? "" : "readonly ")}${key}: ${convertType(field.type)}\n`;
         });
 
@@ -217,7 +378,7 @@ function main()
                 return;
             }
 
-            var args = method.arguments.map(arg => 
+            var args = method.arguments.map(arg =>
             {
                 return `${sanitizeVariableName(arg.name)}: ${convertType(arg.type)}`;
             }).join(", ");
@@ -238,7 +399,9 @@ function main()
         output += "}\n\n";
     });
 
-    fs.writeFileSync("output.ts", output);
+    customLines.forEach(line => output += line + '\n\n');
+
+    fs.writeFileSync("output.d.ts", output);
 }
 
 main();
