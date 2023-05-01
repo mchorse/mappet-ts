@@ -201,6 +201,24 @@ var ignoreFields = [
 var customLines = [
     "declare const Java: JavaAccessor;",
     "declare const mappet: IScriptFactory;"
+];
+var returnsThis = [
+    "UIComponent",
+    "UIClickComponent",
+    "UIGraphicsComponent",
+    "UIIconButtonComponent",
+    "UIStackComponent",
+    "UIStringListComponent",
+    "UITrackpadComponent",
+    "UIParentComponent",
+    "UILayoutComponent",
+    "UILabelBaseComponent",
+    "UIButtonComponent",
+    "UILabelComponent",
+    "UITextareaComponent",
+    "UITextboxComponent",
+    "UITextComponent",
+    "UIToggleComponent",
 ]
 
 function convertType(type)
@@ -309,7 +327,7 @@ function generateJSDocs(method)
 
 function main()
 {
-    var output = "// SCRIPTING API\n\n";
+    var output = "// SCRIPpotentuallyTING API\n\n";
     var classes = [...docs.classes, ...customDeclares];
 
     classes.forEach(clazz =>
@@ -320,7 +338,8 @@ function main()
 
         function getField(name) 
         {
-            name = name[3].toLowerCase() + name.substr(4);
+            var nextInUpperCase = name[4].toLowerCase() !== name[4];
+            name = nextInUpperCase ? name.substr(3) : name[3].toLowerCase() + name.substr(4);
 
             if (!fields[name])
             {
@@ -391,6 +410,11 @@ function main()
             }
 
             var returnsType = customReturns[customArgKey] ? customReturns[customArgKey] : method.returns.type;
+
+            if (clazz.name === returnsType && returnsThis.indexOf(name) !== -1)
+            {
+                returnsType = "this";
+            }
 
             output += generateJSDocs(method);
             output += `    ${method.name}(${args}): ${convertType(returnsType)}\n`;
